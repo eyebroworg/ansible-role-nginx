@@ -1,0 +1,27 @@
+# Nginx log rotation configuration
+# Managed by Ansible - eyebrowkang.nginx role
+
+/var/log/nginx/*.log {
+    {{ nginx_logrotate_frequency }}
+    rotate {{ nginx_logrotate_rotate }}
+    maxsize {{ nginx_logrotate_maxsize }}
+    missingok
+{% if nginx_logrotate_compress %}
+    compress
+{% endif %}
+{% if nginx_logrotate_delaycompress %}
+    delaycompress
+{% endif %}
+{% if nginx_logrotate_notifempty %}
+    notifempty
+{% endif %}
+    create {{ nginx_logrotate_create }}
+{% if nginx_logrotate_sharedscripts %}
+    sharedscripts
+{% endif %}
+    postrotate
+        if [ -f {{ nginx_pidfile }} ]; then
+            kill -USR1 $(cat {{ nginx_pidfile }})
+        fi
+    endscript
+}

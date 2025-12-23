@@ -1,0 +1,26 @@
+---
+# Linux kernel optimization for web server workloads
+# Only applies to Linux systems
+
+- name: Check if running on Linux
+  ansible.builtin.set_fact:
+    _is_linux: "{{ ansible_facts.system == 'Linux' }}"
+
+- name: Configure kernel parameters for nginx
+  when:
+    - nginx_kernel_optimization_enabled | bool
+    - _is_linux | bool
+  block:
+    - name: Deploy sysctl configuration for nginx
+      ansible.builtin.template:
+        src: sysctl-nginx.conf.j2
+        dest: "{{ nginx_sysctl_config_file }}"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: apply sysctl settings
+
+    - name: Apply sysctl settings immediately
+      ansible.builtin.command: sysctl -p {{ nginx_sysctl_config_file }}
+      changed_when: false
+      when: not ansible_check_mode

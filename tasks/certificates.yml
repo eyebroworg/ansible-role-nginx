@@ -1,0 +1,80 @@
+---
+# SSL Certificate distribution via Ansible Vault
+
+- name: Deploy certificates from vault
+  when: nginx_vault_certificates | length > 0
+  block:
+    - name: Create certificate directories for each domain
+      ansible.builtin.file:
+        path: "{{ nginx_ssl_certs_path }}/{{ item.domain }}"
+        state: directory
+        owner: root
+        group: "{{ root_group }}"
+        mode: '0755'
+      loop: "{{ nginx_vault_certificates }}"
+      loop_control:
+        label: "{{ item.domain }}"
+
+    - name: Deploy SSL certificates
+      ansible.builtin.copy:
+        content: "{{ item.cert }}"
+        dest: "{{ nginx_ssl_certs_path }}/{{ item.domain }}/cert.pem"
+        owner: root
+        group: "{{ root_group }}"
+        mode: '0644'
+      loop: "{{ nginx_vault_certificates }}"
+      loop_control:
+        label: "{{ item.domain }}"
+      notify: reload nginx
+      no_log: true
+
+    - name: Deploy SSL private keys
+      ansible.builtin.copy:
+        content: "{{ item.key }}"
+        dest: "{{ nginx_ssl_certs_path }}/{{ item.domain }}/key.pem"
+        owner: root
+        group: "{{ root_group }}"
+        mode: '0600'
+      loop: "{{ nginx_vault_certificates }}"
+      loop_control:
+        label: "{{ item.domain }}"
+      notify: reload nginx
+      no_log: true
+
+    - name: Deploy SSL certificate chains (if provided)
+      ansible.builtin.copy:
+        content: "{{ item.chain }}"
+        dest: "{{ nginx_ssl_certs_path }}/{{ item.domain }}/chain.pem"
+        owner: root
+        group: "{{ root_group }}"
+        mode: '0644'
+      loop: "{{ nginx_vault_certificates }}"
+      loop_control:
+        label: "{{ item.domain }}"
+      when: item.chain is defined
+      notify: reload nginx
+      no_log: true
+
+    - name: Create fullchain certificate (cert + chain)
+      ansible.builtin.shell: |
+        cat "{{ nginx_ssl_certs_path }}/{{ item.domain }}/cert.pem" \
+            "{{ nginx_ssl_certs_path }}/{{ item.domain }}/chain.pem" \
+            > "{{ nginx_ssl_certs_path }}/{{ item.domain }}/fullchain.pem"
+      args:
+        creates: "{{ nginx_ssl_certs_path }}/{{ item.domain }}/fullchain.pem"
+      loop: "{{ nginx_vault_certificates }}"
+      loop_control:
+        label: "{{ item.domain }}"
+      when: item.chain is defined
+      notify: reload nginx
+
+    - name: Set permissions on fullchain certificate
+      ansible.builtin.file:
+        path: "{{ nginx_ssl_certs_path }}/{{ item.domain }}/fullchain.pem"
+        owner: root
+        group: "{{ root_group }}"
+        mode: '0644'
+      loop: "{{ nginx_vault_certificates }}"
+      loop_control:
+        label: "{{ item.domain }}"
+      when: item.chain is defined

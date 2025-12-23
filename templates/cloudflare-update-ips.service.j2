@@ -1,0 +1,16 @@
+# Cloudflare IP update service for nginx
+# Managed by Ansible - eyebrowkang.nginx role
+
+[Unit]
+Description=Update Cloudflare IP ranges for nginx
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart={{ nginx_cloudflare_ip_update_script }}
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

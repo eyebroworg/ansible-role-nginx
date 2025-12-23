@@ -1,0 +1,20 @@
+---
+# Logrotate configuration for nginx
+
+- name: Configure logrotate for nginx
+  when:
+    - nginx_logrotate_enabled | bool
+    - ansible_facts.system == 'Linux'
+  block:
+    - name: Ensure logrotate is installed
+      ansible.builtin.package:
+        name: logrotate
+        state: present
+
+    - name: Deploy nginx logrotate configuration
+      ansible.builtin.template:
+        src: logrotate-nginx.j2
+        dest: /etc/logrotate.d/nginx
+        owner: root
+        group: root
+        mode: '0644'

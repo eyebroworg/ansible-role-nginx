@@ -1,0 +1,36 @@
+---
+# Detect nginx version for feature compatibility
+
+- name: Get nginx version
+  ansible.builtin.command: nginx -v
+  register: _nginx_version_output
+  changed_when: false
+  failed_when: false
+
+- name: Parse nginx version
+  ansible.builtin.set_fact:
+    nginx_version: "{{ _nginx_version_output.stderr | regex_search('nginx/([0-9]+\\.[0-9]+\\.[0-9]+)', '\\1') | first | default('0.0.0') }}"
+  when: _nginx_version_output.rc == 0
+
+- name: Set nginx version components
+  ansible.builtin.set_fact:
+    nginx_version_major: "{{ nginx_version.split('.')[0] | int }}"
+    nginx_version_minor: "{{ nginx_version.split('.')[1] | int }}"
+    nginx_version_patch: "{{ nginx_version.split('.')[2] | int }}"
+  when: nginx_version is defined
+
+# nginx 1.25.1+ uses "http2 on;" directive instead of "listen ... http2"
+- name: Determine HTTP/2 configuration style
+  ansible.builtin.set_fact:
+    nginx_http2_modern: >-
+      {{
+        (nginx_version_major | int > 1) or
+        (nginx_version_major | int == 1 and nginx_version_minor | int > 25) or
+        (nginx_version_major | int == 1 and nginx_version_minor | int == 25 and nginx_version_patch | int >= 1)
+      }}
+  when: nginx_version is defined
+
+- name: Fallback for HTTP/2 style if version unknown
+  ansible.builtin.set_fact:
+    nginx_http2_modern: true
+  when: nginx_version is not defined

@@ -1,0 +1,28 @@
+# Default server block - catches all unmatched requests
+# Managed by Ansible - eyebrowkang.nginx role
+# This prevents leaking real hostnames when clients connect with unknown Host header
+
+# HTTP default server
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+    return {{ nginx_default_server_return }};
+}
+
+{% if nginx_ssl_default_cert_enabled %}
+# HTTPS default server
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _;
+
+    ssl_certificate {{ nginx_ssl_default_cert_path }}/cert.pem;
+    ssl_certificate_key {{ nginx_ssl_default_cert_path }}/key.pem;
+
+    # Include SSL parameters
+    include {{ nginx_conf_path }}/ssl-params.conf;
+
+    return {{ nginx_default_server_return }};
+}
+{% endif %}

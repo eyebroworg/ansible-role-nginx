@@ -30,6 +30,24 @@
 - include_tasks: setup-Suse.yml
   when: ansible_facts.os_family == 'Suse'
 
+# Linux kernel optimization (optional).
+- import_tasks: kernel-optimization.yml
+
+# SSL/TLS security configuration.
+- import_tasks: ssl-security.yml
+
+# Certificate distribution.
+- import_tasks: certificates.yml
+
+# Logrotate configuration.
+- import_tasks: logrotate.yml
+
+# Cloudflare integration (optional).
+- import_tasks: cloudflare.yml
+
+# Detect nginx version for feature compatibility.
+- import_tasks: version-check.yml
+
 # Vhost configuration.
 - import_tasks: vhosts.yml
 

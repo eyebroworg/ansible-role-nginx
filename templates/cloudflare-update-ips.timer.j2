@@ -1,0 +1,13 @@
+# Cloudflare IP update timer for nginx
+# Managed by Ansible - eyebrowkang.nginx role
+
+[Unit]
+Description=Timer for updating Cloudflare IP ranges
+
+[Timer]
+OnCalendar={{ nginx_cloudflare_ip_update_calendar }}
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

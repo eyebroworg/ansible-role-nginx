@@ -3,7 +3,7 @@
 server {
     listen       {{ item.listen | default('80') }};
 {% if nginx_listen_ipv6 %}
-    listen       [::]:{{item.listen | default('80') }};
+    listen       [::]:{{ item.listen | default('80') }};
 {% endif %}
     server_name  {{ item.server_name_redirect }};
     return       301 $scheme://{{ item.server_name.split(' ')[0] }}$request_uri;
@@ -15,13 +15,58 @@ server {
     {% block server_begin %}{% endblock %}
 
     {% block server_basic -%}
+{% set _http2_enabled = item.http2 | default(true) %}
+{% if item.ssl is defined and item.ssl | bool %}
+{% if nginx_http2_modern | default(true) %}
+{# nginx 1.25.1+ uses http2 directive #}
+    listen {{ item.listen | default('443') }} ssl;
+{% if nginx_listen_ipv6 %}
+    listen [::]:{{ item.listen | default('443') }} ssl;
+{% endif %}
+{% if _http2_enabled %}
+    http2 on;
+{% endif %}
+{% else %}
+{# nginx < 1.25.1 uses listen ... http2 syntax #}
+    listen {{ item.listen | default('443') }} ssl{% if _http2_enabled %} http2{% endif %};
+{% if nginx_listen_ipv6 %}
+    listen [::]:{{ item.listen | default('443') }} ssl{% if _http2_enabled %} http2{% endif %};
+{% endif %}
+{% endif %}
+{% else %}
     listen {{ item.listen | default('80') }};
 {% if nginx_listen_ipv6 %}
-    listen       [::]:{{item.listen | default('80') }};
+    listen [::]:{{ item.listen | default('80') }};
+{% endif %}
 {% endif %}
 
 {% if item.server_name is defined %}
     server_name {{ item.server_name }};
+{% endif %}
+
+{% if item.ssl is defined and item.ssl | bool %}
+    # SSL Certificate
+{% if item.ssl_certificate is defined %}
+    ssl_certificate {{ item.ssl_certificate }};
+    ssl_certificate_key {{ item.ssl_certificate_key }};
+{% elif item.ssl_domain is defined %}
+    ssl_certificate {{ nginx_ssl_certs_path }}/{{ item.ssl_domain }}/{% if item.ssl_use_fullchain | default(false) %}fullchain{% else %}cert{% endif %}.pem;
+    ssl_certificate_key {{ nginx_ssl_certs_path }}/{{ item.ssl_domain }}/key.pem;
+{% endif %}
+
+    # Include SSL parameters
+    include {{ nginx_conf_path }}/ssl-params.conf;
+
+{% if nginx_hsts_enabled | default(true) %}
+    # HSTS
+    add_header Strict-Transport-Security "max-age={{ nginx_hsts_max_age | default(31536000) }}{% if nginx_hsts_include_subdomains | default(true) %} includeSubDomains{% endif %}{% if nginx_hsts_preload | default(false) %} preload{% endif %}" always;
+{% endif %}
+
+{% if item.ssl_client_certificate is defined %}
+    # Client certificate verification (e.g., Cloudflare Authenticated Origin Pulls)
+    ssl_client_certificate {{ item.ssl_client_certificate }};
+    ssl_verify_client on;
+{% endif %}
 {% endif %}
 
 {% if item.root is defined %}
@@ -48,6 +93,6 @@ server {
     {% block server_end %}{% endblock %}
 
 {% if item.extra_parameters is defined %}
-    {{ item.extra_parameters|indent(4) }}
+    {{ item.extra_parameters | indent(4) }}
 {% endif %}
 }

@@ -1,0 +1,100 @@
+---
+# Cloudflare integration configuration for nginx
+
+- name: Configure Cloudflare integration
+  when: nginx_cloudflare_enabled | bool
+  block:
+    # =========================================================================
+    # Cloudflare Real IP Configuration
+    # =========================================================================
+    - name: Configure Cloudflare real_ip
+      when: nginx_cloudflare_real_ip_enabled | bool
+      block:
+        - name: Deploy Cloudflare IP update script
+          ansible.builtin.template:
+            src: cloudflare-update-ips.sh.j2
+            dest: "{{ nginx_cloudflare_ip_update_script }}"
+            owner: root
+            group: root
+            mode: '0755'
+
+        - name: Run Cloudflare IP update script initially
+          ansible.builtin.command: "{{ nginx_cloudflare_ip_update_script }}"
+          args:
+            creates: "{{ nginx_cloudflare_real_ip_config }}"
+          notify: reload nginx
+
+        - name: Deploy systemd service for Cloudflare IP update
+          ansible.builtin.template:
+            src: cloudflare-update-ips.service.j2
+            dest: /etc/systemd/system/cloudflare-update-ips.service
+            owner: root
+            group: root
+            mode: '0644'
+          when:
+            - nginx_cloudflare_ip_update_timer_enabled | bool
+            - ansible_facts.service_mgr == 'systemd'
+          notify: daemon reload
+
+        - name: Deploy systemd timer for Cloudflare IP update
+          ansible.builtin.template:
+            src: cloudflare-update-ips.timer.j2
+            dest: /etc/systemd/system/cloudflare-update-ips.timer
+            owner: root
+            group: root
+            mode: '0644'
+          when:
+            - nginx_cloudflare_ip_update_timer_enabled | bool
+            - ansible_facts.service_mgr == 'systemd'
+          notify: daemon reload
+
+        - name: Enable and start Cloudflare IP update timer
+          ansible.builtin.systemd:
+            name: cloudflare-update-ips.timer
+            state: started
+            enabled: true
+            daemon_reload: true
+          when:
+            - nginx_cloudflare_ip_update_timer_enabled | bool
+            - ansible_facts.service_mgr == 'systemd'
+
+    # =========================================================================
+    # Cloudflare Authenticated Origin Pulls
+    # =========================================================================
+    - name: Configure Cloudflare Authenticated Origin Pulls
+      when: nginx_cloudflare_origin_pull_enabled | bool
+      block:
+        - name: Ensure Cloudflare certificate directory exists
+          ansible.builtin.file:
+            path: "{{ nginx_cloudflare_origin_pull_cert_path | dirname }}"
+            state: directory
+            owner: root
+            group: "{{ root_group }}"
+            mode: '0755'
+
+        # https://developers.cloudflare.com/ssl/static/authenticated_origin_pull_ca.pem
+        - name: Deploy Cloudflare Origin Pull CA certificate
+          ansible.builtin.copy:
+            src: authenticated_origin_pull_ca.pem
+            dest: "{{ nginx_cloudflare_origin_pull_cert_path }}"
+            owner: root
+            group: "{{ root_group }}"
+            mode: '0644'
+          notify: reload nginx
+
+- name: Remove Cloudflare configuration if disabled
+  when: not (nginx_cloudflare_enabled | bool)
+  block:
+    - name: Remove Cloudflare real_ip configuration
+      ansible.builtin.file:
+        path: "{{ nginx_cloudflare_real_ip_config }}"
+        state: absent
+      notify: reload nginx
+
+    - name: Stop and disable Cloudflare IP update timer
+      ansible.builtin.systemd:
+        name: cloudflare-update-ips.timer
+        state: stopped
+        enabled: false
+      failed_when: false
+      when: ansible_facts.service_mgr == 'systemd'
