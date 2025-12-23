@@ -1,51 +1,29 @@
 # SSL/TLS Security Parameters
 # Managed by Ansible - eyebrowkang.nginx role
-# Policy: {{ nginx_ssl_policy }}
 
-# =============================================================================
 # SSL Protocols and Ciphers
-# =============================================================================
 {% if nginx_ssl_policy == 'modern' %}
-# Modern configuration (TLSv1.3 only)
-# Recommended for services with modern clients only
 ssl_protocols TLSv1.3;
-ssl_prefer_server_ciphers off;
 {% else %}
-# Intermediate configuration (TLSv1.2 + TLSv1.3)
-# Recommended for general-purpose servers
 ssl_protocols TLSv1.2 TLSv1.3;
 ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+{% endif %}
 ssl_prefer_server_ciphers off;
-{% endif %}
 
-# =============================================================================
 # DH Parameters
-# =============================================================================
 {% if nginx_ssl_dhparam_enabled %}
-ssl_dhparam {{ nginx_ssl_dhparam_path }};
+ssl_dhparam {{ nginx_ssl_certs_path }}/dhparam.pem;
 {% endif %}
 
-# =============================================================================
-# SSL Session Settings
-# =============================================================================
-ssl_session_timeout {{ nginx_ssl_session_timeout }};
-ssl_session_cache {{ nginx_ssl_session_cache }};
-ssl_session_tickets {{ nginx_ssl_session_tickets }};
+# SSL Session
+ssl_session_timeout 1d;
+ssl_session_cache shared:SSL:10m;
+ssl_session_tickets off;
 
-# =============================================================================
 # OCSP Stapling
-# =============================================================================
 {% if nginx_ssl_stapling_enabled %}
 ssl_stapling on;
 ssl_stapling_verify on;
 resolver 1.1.1.1 8.8.8.8 valid=300s;
 resolver_timeout 5s;
-{% endif %}
-
-# =============================================================================
-# Security Headers (apply in server blocks as needed)
-# =============================================================================
-{% if nginx_hsts_enabled %}
-# HSTS header - uncomment in server blocks
-# add_header Strict-Transport-Security "max-age={{ nginx_hsts_max_age }}{% if nginx_hsts_include_subdomains %} includeSubDomains{% endif %}{% if nginx_hsts_preload %} preload{% endif %}" always;
 {% endif %}

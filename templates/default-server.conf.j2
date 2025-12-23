@@ -17,10 +17,9 @@ server {
     listen [::]:443 ssl default_server;
     server_name _;
 
-    ssl_certificate {{ nginx_ssl_default_cert_path }}/cert.pem;
-    ssl_certificate_key {{ nginx_ssl_default_cert_path }}/key.pem;
+    ssl_certificate {{ nginx_ssl_certs_path }}/default/cert.pem;
+    ssl_certificate_key {{ nginx_ssl_certs_path }}/default/key.pem;
 
-    # Include SSL parameters
     include {{ nginx_conf_path }}/ssl-params.conf;
 
     return {{ nginx_default_server_return }};

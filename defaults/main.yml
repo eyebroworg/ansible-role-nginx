@@ -76,10 +76,9 @@ nginx_vhosts: []
 #   ssl: true # Enable SSL/TLS
 #   http2: true # Enable HTTP/2 (default: true when ssl is enabled)
 #   ssl_domain: "example.com" # Use certificate from nginx_ssl_certs_path/domain/
-#   ssl_use_fullchain: true # Use fullchain.pem instead of cert.pem
-#   # Or specify custom paths:
-#   ssl_certificate: "/path/to/cert.pem"
-#   ssl_certificate_key: "/path/to/key.pem"
+#   # Or specify custom certificate paths:
+#   ssl_certificate: "/path/to/fullchain.pem"
+#   ssl_certificate_key: "/path/to/privkey.pem"
 #   # Cloudflare Authenticated Origin Pulls:
 #   ssl_client_certificate: "{{ nginx_cloudflare_origin_pull_cert_path }}"
 #
@@ -119,36 +118,20 @@ nginx_sysctl_config_file: /etc/sysctl.d/80-nginx.conf
 # SSL certificates directory
 nginx_ssl_certs_path: /etc/nginx/certs
 
-# DH parameters configuration
+# Generate DH parameters (2048-bit)
 nginx_ssl_dhparam_enabled: true
-nginx_ssl_dhparam_bits: 2048
-nginx_ssl_dhparam_path: "{{ nginx_ssl_certs_path }}/dhparam.pem"
-# Async timeout for DH generation (in seconds), useful for low-spec machines
-nginx_ssl_dhparam_async_timeout: 600
 
 # Self-signed certificate for default server (prevents hostname leakage)
 nginx_ssl_default_cert_enabled: true
-nginx_ssl_default_cert_path: "{{ nginx_ssl_certs_path }}/default"
-nginx_ssl_default_cert_days: 3650
-nginx_ssl_default_cert_cn: "localhost"
 
-# Modern SSL policy (default: only TLSv1.3)
-# Options: "modern" (TLSv1.3 only), "intermediate" (TLSv1.2 + TLSv1.3)
+# SSL policy: "modern" (TLSv1.3 only) or "intermediate" (TLSv1.2 + TLSv1.3)
 nginx_ssl_policy: "modern"
-
-# SSL session settings
-nginx_ssl_session_timeout: "1d"
-nginx_ssl_session_cache: "shared:SSL:10m"
-nginx_ssl_session_tickets: "off"
 
 # OCSP Stapling
 nginx_ssl_stapling_enabled: true
 
 # HSTS (HTTP Strict Transport Security)
 nginx_hsts_enabled: true
-nginx_hsts_max_age: 31536000
-nginx_hsts_include_subdomains: true
-nginx_hsts_preload: false
 
 # =============================================================================
 # Default Server Configuration
@@ -161,14 +144,7 @@ nginx_default_server_return: "444"
 # Logrotate Configuration
 # =============================================================================
 nginx_logrotate_enabled: true
-nginx_logrotate_frequency: "daily"
-nginx_logrotate_rotate: 14
-nginx_logrotate_maxsize: "100M"
-nginx_logrotate_compress: true
-nginx_logrotate_delaycompress: true
-nginx_logrotate_notifempty: true
-nginx_logrotate_create: "0640 {{ nginx_user | default('www-data') }} adm"
-nginx_logrotate_sharedscripts: true
+nginx_logrotate_days: 14
 
 # =============================================================================
 # Certificate Distribution (via Ansible Vault)
@@ -176,16 +152,14 @@ nginx_logrotate_sharedscripts: true
 # List of certificates to deploy
 # Each certificate should have:
 #   - domain: the domain name (used for directory name)
-#   - cert: certificate content (from vault)
-#   - key: private key content (from vault)
-#   - chain: (optional) certificate chain content
+#   - cert: certificate content (recommended: fullchain, i.e. cert + intermediate CA)
+#   - key: private key content
 nginx_vault_certificates: []
 # Example:
 # nginx_vault_certificates:
 #   - domain: "example.com"
-#     cert: "{{ vault_example_com_cert }}"
+#     cert: "{{ vault_example_com_fullchain }}"
 #     key: "{{ vault_example_com_key }}"
-#     chain: "{{ vault_example_com_chain | default(omit) }}"
 
 # =============================================================================
 # Cloudflare Integration (Optional)

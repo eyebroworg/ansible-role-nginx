@@ -50,7 +50,7 @@ server {
     ssl_certificate {{ item.ssl_certificate }};
     ssl_certificate_key {{ item.ssl_certificate_key }};
 {% elif item.ssl_domain is defined %}
-    ssl_certificate {{ nginx_ssl_certs_path }}/{{ item.ssl_domain }}/{% if item.ssl_use_fullchain | default(false) %}fullchain{% else %}cert{% endif %}.pem;
+    ssl_certificate {{ nginx_ssl_certs_path }}/{{ item.ssl_domain }}/cert.pem;
     ssl_certificate_key {{ nginx_ssl_certs_path }}/{{ item.ssl_domain }}/key.pem;
 {% endif %}
 
@@ -58,8 +58,8 @@ server {
     include {{ nginx_conf_path }}/ssl-params.conf;
 
 {% if nginx_hsts_enabled | default(true) %}
-    # HSTS
-    add_header Strict-Transport-Security "max-age={{ nginx_hsts_max_age | default(31536000) }}{% if nginx_hsts_include_subdomains | default(true) %} includeSubDomains{% endif %}{% if nginx_hsts_preload | default(false) %} preload{% endif %}" always;
+    # HSTS (1 year, includeSubDomains)
+    add_header Strict-Transport-Security "max-age=31536000 includeSubDomains" always;
 {% endif %}
 
 {% if item.ssl_client_certificate is defined %}

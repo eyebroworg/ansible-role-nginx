@@ -52,7 +52,7 @@ nginx_vhosts:
 
 ## SSL/TLS Configuration
 
-### Single HTTPS Website with Custom Certificate
+### Single HTTPS Website with Custom Certificate Path
 
 ```yaml
 nginx_vhosts:
@@ -69,16 +69,14 @@ nginx_vhosts:
 # Certificate distribution
 nginx_vault_certificates:
   - domain: "example.com"
-    cert: "{{ vault_example_com_cert }}"
+    cert: "{{ vault_example_com_fullchain }}"
     key: "{{ vault_example_com_key }}"
-    chain: "{{ vault_example_com_chain }}"
 
 # Vhost configuration
 nginx_vhosts:
   - server_name: "example.com"
     ssl: true
     ssl_domain: "example.com"
-    ssl_use_fullchain: true
     root: "/var/www/example.com"
 ```
 
@@ -87,11 +85,11 @@ nginx_vhosts:
 ```yaml
 nginx_vault_certificates:
   - domain: "site1.example.com"
-    cert: "{{ vault_site1_cert }}"
+    cert: "{{ vault_site1_fullchain }}"
     key: "{{ vault_site1_key }}"
 
   - domain: "site2.example.com"
-    cert: "{{ vault_site2_cert }}"
+    cert: "{{ vault_site2_fullchain }}"
     key: "{{ vault_site2_key }}"
 
 nginx_vhosts:
@@ -145,15 +143,15 @@ nginx_cloudflare_origin_pull_enabled: true
 # Certificates
 nginx_vault_certificates:
   - domain: "site1.example.com"
-    cert: "{{ vault_site1_cert }}"
+    cert: "{{ vault_site1_fullchain }}"
     key: "{{ vault_site1_key }}"
 
   - domain: "site2.example.com"
-    cert: "{{ vault_site2_cert }}"
+    cert: "{{ vault_site2_fullchain }}"
     key: "{{ vault_site2_key }}"
 
   - domain: "site3.example.com"
-    cert: "{{ vault_site3_cert }}"
+    cert: "{{ vault_site3_fullchain }}"
     key: "{{ vault_site3_key }}"
 
 # All vhosts use Cloudflare Authenticated Origin Pulls
@@ -214,15 +212,15 @@ nginx_cloudflare_origin_pull_enabled: true
 
 nginx_vault_certificates:
   - domain: "public.example.com"
-    cert: "{{ vault_public_cert }}"
+    cert: "{{ vault_public_fullchain }}"
     key: "{{ vault_public_key }}"
 
   - domain: "admin.example.com"
-    cert: "{{ vault_admin_cert }}"
+    cert: "{{ vault_admin_fullchain }}"
     key: "{{ vault_admin_key }}"
 
   - domain: "api.example.com"
-    cert: "{{ vault_api_cert }}"
+    cert: "{{ vault_api_fullchain }}"
     key: "{{ vault_api_key }}"
 
 nginx_vhosts:
@@ -397,20 +395,21 @@ nginx_vhosts:
 In your Ansible Vault file (e.g., `vault.yml`):
 
 ```yaml
-vault_example_com_cert: |
+# Fullchain certificate (server cert + intermediate CA chain)
+# This is the recommended format for ssl_certificate
+vault_example_com_fullchain: |
   -----BEGIN CERTIFICATE-----
-  MIIFazCCBFOgAwIBAgISA...
+  MIIFazCCBFOgAwIBAgISA... (your server certificate)
+  -----END CERTIFICATE-----
+  -----BEGIN CERTIFICATE-----
+  MIIFFjCCAv6gAwIBAgIRAJ... (intermediate CA certificate)
   -----END CERTIFICATE-----
 
+# Private key
 vault_example_com_key: |
   -----BEGIN PRIVATE KEY-----
   MIIEvgIBADANBgkqhkiG9w...
   -----END PRIVATE KEY-----
-
-vault_example_com_chain: |
-  -----BEGIN CERTIFICATE-----
-  MIIFFjCCAv6gAwIBAgIRAJ...
-  -----END CERTIFICATE-----
 ```
 
 ### Use in Playbook
@@ -418,15 +417,13 @@ vault_example_com_chain: |
 ```yaml
 nginx_vault_certificates:
   - domain: "example.com"
-    cert: "{{ vault_example_com_cert }}"
+    cert: "{{ vault_example_com_fullchain }}"
     key: "{{ vault_example_com_key }}"
-    chain: "{{ vault_example_com_chain }}"
 
 nginx_vhosts:
   - server_name: "example.com"
     ssl: true
     ssl_domain: "example.com"
-    ssl_use_fullchain: true  # Uses fullchain.pem (cert + chain)
     root: "/var/www/example.com"
 ```
 
@@ -472,11 +469,7 @@ nginx_vhosts:
 
 ```yaml
 nginx_logrotate_enabled: true
-nginx_logrotate_frequency: "daily"
-nginx_logrotate_rotate: 30
-nginx_logrotate_maxsize: "500M"
-nginx_logrotate_compress: true
-nginx_logrotate_delaycompress: true
+nginx_logrotate_days: 30  # Keep logs for 30 days
 ```
 
 ---
@@ -494,10 +487,7 @@ nginx_kernel_optimization_enabled: true
 
 # SSL/TLS settings
 nginx_ssl_policy: "modern"  # TLSv1.3 only
-nginx_ssl_dhparam_bits: 2048
 nginx_hsts_enabled: true
-nginx_hsts_max_age: 31536000
-nginx_hsts_include_subdomains: true
 
 # Security
 nginx_server_tokens: "off"
@@ -518,23 +508,20 @@ nginx_cloudflare_ip_update_calendar: "daily"
 
 # Logrotate
 nginx_logrotate_enabled: true
-nginx_logrotate_rotate: 30
-nginx_logrotate_maxsize: "200M"
+nginx_logrotate_days: 30
 
-# Certificates from vault
+# Certificates from vault (use fullchain for cert)
 nginx_vault_certificates:
   - domain: "www.example.com"
-    cert: "{{ vault_www_cert }}"
+    cert: "{{ vault_www_fullchain }}"
     key: "{{ vault_www_key }}"
-    chain: "{{ vault_www_chain }}"
 
   - domain: "api.example.com"
-    cert: "{{ vault_api_cert }}"
+    cert: "{{ vault_api_fullchain }}"
     key: "{{ vault_api_key }}"
-    chain: "{{ vault_api_chain }}"
 
   - domain: "admin.example.com"
-    cert: "{{ vault_admin_cert }}"
+    cert: "{{ vault_admin_fullchain }}"
     key: "{{ vault_admin_key }}"
 
 # Upstreams
@@ -564,7 +551,6 @@ nginx_vhosts:
   - server_name: "www.example.com"
     ssl: true
     ssl_domain: "www.example.com"
-    ssl_use_fullchain: true
     ssl_client_certificate: "{{ nginx_cloudflare_origin_pull_cert_path }}"
     extra_parameters: |
       location / {
@@ -587,7 +573,6 @@ nginx_vhosts:
   - server_name: "api.example.com"
     ssl: true
     ssl_domain: "api.example.com"
-    ssl_use_fullchain: true
     ssl_client_certificate: "{{ nginx_cloudflare_origin_pull_cert_path }}"
     extra_parameters: |
       location / {

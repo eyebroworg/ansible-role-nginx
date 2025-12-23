@@ -17,21 +17,21 @@
   block:
     - name: Check if DH parameters file exists
       ansible.builtin.stat:
-        path: "{{ nginx_ssl_dhparam_path }}"
+        path: "{{ nginx_ssl_certs_path }}/dhparam.pem"
       register: _dhparam_stat
 
     - name: Generate DH parameters (this may take a while on low-spec machines)
       ansible.builtin.command:
-        cmd: openssl dhparam -out {{ nginx_ssl_dhparam_path }} {{ nginx_ssl_dhparam_bits }}
-        creates: "{{ nginx_ssl_dhparam_path }}"
-      async: "{{ nginx_ssl_dhparam_async_timeout }}"
+        cmd: openssl dhparam -out {{ nginx_ssl_certs_path }}/dhparam.pem 2048
+        creates: "{{ nginx_ssl_certs_path }}/dhparam.pem"
+      async: 600
       poll: 10
       when: not _dhparam_stat.stat.exists
       notify: reload nginx
 
     - name: Set permissions on DH parameters file
       ansible.builtin.file:
-        path: "{{ nginx_ssl_dhparam_path }}"
+        path: "{{ nginx_ssl_certs_path }}/dhparam.pem"
         owner: root
         group: "{{ root_group }}"
         mode: '0644'
@@ -45,7 +45,7 @@
   block:
     - name: Ensure default certificate directory exists
       ansible.builtin.file:
-        path: "{{ nginx_ssl_default_cert_path }}"
+        path: "{{ nginx_ssl_certs_path }}/default"
         state: directory
         owner: root
         group: "{{ root_group }}"
@@ -53,24 +53,24 @@
 
     - name: Check if default certificate exists
       ansible.builtin.stat:
-        path: "{{ nginx_ssl_default_cert_path }}/cert.pem"
+        path: "{{ nginx_ssl_certs_path }}/default/cert.pem"
       register: _default_cert_stat
 
     - name: Generate self-signed certificate for default server
       ansible.builtin.command:
         cmd: >
           openssl req -x509 -nodes -newkey rsa:2048
-          -days {{ nginx_ssl_default_cert_days }}
-          -keyout {{ nginx_ssl_default_cert_path }}/key.pem
-          -out {{ nginx_ssl_default_cert_path }}/cert.pem
-          -subj "/CN={{ nginx_ssl_default_cert_cn }}"
-        creates: "{{ nginx_ssl_default_cert_path }}/cert.pem"
+          -days 3650
+          -keyout {{ nginx_ssl_certs_path }}/default/key.pem
+          -out {{ nginx_ssl_certs_path }}/default/cert.pem
+          -subj "/CN=localhost"
+        creates: "{{ nginx_ssl_certs_path }}/default/cert.pem"
       when: not _default_cert_stat.stat.exists
       notify: reload nginx
 
     - name: Set permissions on default certificate files
       ansible.builtin.file:
-        path: "{{ nginx_ssl_default_cert_path }}/{{ item.name }}"
+        path: "{{ nginx_ssl_certs_path }}/default/{{ item.name }}"
         owner: root
         group: "{{ root_group }}"
         mode: "{{ item.mode }}"
