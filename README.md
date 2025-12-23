@@ -1,5 +1,7 @@
 # Ansible Role: Nginx
 
+## This repo is forked from [geerlingguy/ansible-role-nginx](https://github.com/geerlingguy/ansible-role-nginx) with some customized modification for me.
+
 [![CI](https://github.com/geerlingguy/ansible-role-nginx/actions/workflows/ci.yml/badge.svg)](https://github.com/geerlingguy/ansible-role-nginx/actions/workflows/ci.yml)
 
 **Note:** Please consider using the official [NGINX Ansible role](https://github.com/nginxinc/ansible-role-nginx) from NGINX, Inc.
@@ -15,7 +17,6 @@ None.
 ## Role Variables
 
 Available variables are listed below, along with default values (see `defaults/main.yml`):
-
 
     nginx_listen_ipv6: true
 
@@ -61,7 +62,7 @@ Please take note of the indentation in the above block. The first line should be
 
 An example of a secondary vhost which will redirect to the one shown above.
 
-*Note: The `filename` defaults to the first domain in `server_name`, if you have two vhosts with the same domain, eg. a redirect, you need to manually set the `filename` so the second one doesn't override the first one*
+_Note: The `filename` defaults to the first domain in `server_name`, if you have two vhosts with the same domain, eg. a redirect, you need to manually set the `filename` so the second one doesn't override the first one_
 
     nginx_remove_default_vhost: false
 
@@ -248,3 +249,5 @@ MIT / BSD
 ## Author Information
 
 This role was created in 2014 by [Jeff Geerling](https://www.jeffgeerling.com/), author of [Ansible for DevOps](https://www.ansiblefordevops.com/).
+
+Modified by Eyebrow Kang in 2025.
