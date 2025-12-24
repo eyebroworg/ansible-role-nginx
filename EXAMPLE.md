@@ -118,13 +118,17 @@ If you only need to redirect HTTP to HTTPS (no domain change):
 nginx_vhosts:
   # HTTP redirect
   - server_name: "example.com"
+    listen: "80"
     return: "301 https://example.com$request_uri"
+    filename: "example.com.80.conf"
 
   # HTTPS main site
   - server_name: "example.com"
+    listen: "443"
     ssl: true
     ssl_domain: "example.com"
     root: "/var/www/example.com"
+    filename: "example.com.443.conf"
 ```
 
 ### Multiple Domains to Single Site

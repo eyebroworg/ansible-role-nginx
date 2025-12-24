@@ -9,6 +9,15 @@
     group: "{{ root_group }}"
     mode: '0755'
 
+# Ensure conf.d exists (cleanup may remove it)
+- name: Ensure nginx conf.d directory exists
+  ansible.builtin.file:
+    path: "{{ nginx_conf_path }}"
+    state: directory
+    owner: root
+    group: "{{ root_group }}"
+    mode: '0755'
+
 # =============================================================================
 # DH Parameters Generation
 # =============================================================================

@@ -37,6 +37,10 @@
   ansible.builtin.include_tasks: setup-Suse.yml
   when: ansible_facts.os_family == 'Suse'
 
+# Configuration cleanup (backup + clean deploy).
+- name: Import cleanup tasks.
+  ansible.builtin.import_tasks: cleanup.yml
+
 # Linux kernel optimization (optional).
 - name: Import kernel optimization tasks.
   ansible.builtin.import_tasks: kernel-optimization.yml
