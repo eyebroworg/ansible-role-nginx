@@ -22,7 +22,7 @@
           ansible.builtin.command: "{{ nginx_cloudflare_ip_update_script }}"
           args:
             creates: "{{ nginx_cloudflare_real_ip_config }}"
-          notify: reload nginx
+          notify: Reload nginx
 
         - name: Deploy systemd service for Cloudflare IP update
           ansible.builtin.template:
@@ -34,7 +34,7 @@
           when:
             - nginx_cloudflare_ip_update_timer_enabled | bool
             - ansible_facts.service_mgr == 'systemd'
-          notify: daemon reload
+          notify: Daemon reload
 
         - name: Deploy systemd timer for Cloudflare IP update
           ansible.builtin.template:
@@ -46,7 +46,7 @@
           when:
             - nginx_cloudflare_ip_update_timer_enabled | bool
             - ansible_facts.service_mgr == 'systemd'
-          notify: daemon reload
+          notify: Daemon reload
 
         - name: Enable and start Cloudflare IP update timer
           ansible.builtin.systemd:
@@ -80,7 +80,7 @@
             owner: root
             group: "{{ root_group }}"
             mode: '0644'
-          notify: reload nginx
+          notify: Reload nginx
 
 - name: Remove Cloudflare configuration if disabled
   when: not (nginx_cloudflare_enabled | bool)
@@ -89,7 +89,7 @@
       ansible.builtin.file:
         path: "{{ nginx_cloudflare_real_ip_config }}"
         state: absent
-      notify: reload nginx
+      notify: Reload nginx
 
     - name: Stop and disable Cloudflare IP update timer
       ansible.builtin.systemd:

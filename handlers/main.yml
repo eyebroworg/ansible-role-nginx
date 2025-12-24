@@ -1,24 +1,24 @@
 ---
-- name: restart nginx
+- name: Restart nginx
   ansible.builtin.service:
     name: nginx
     state: restarted
 
-- name: validate nginx configuration
+- name: Validate nginx configuration
   ansible.builtin.command: nginx -t -c /etc/nginx/nginx.conf
   changed_when: false
 
-- name: reload nginx
+- name: Reload nginx
   ansible.builtin.service:
     name: nginx
     state: reloaded
   when: nginx_service_state == "started"
 
-- name: apply sysctl settings
+- name: Apply sysctl settings
   ansible.builtin.command: sysctl --system
   changed_when: false
 
-- name: daemon reload
+- name: Daemon reload
   ansible.builtin.systemd:
     daemon_reload: true
   when: ansible_facts.service_mgr == 'systemd'

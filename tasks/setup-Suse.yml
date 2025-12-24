@@ -1,6 +1,6 @@
 ---
 - name: Enable nginx repo.
-  zypper_repository:
+  community.general.zypper_repository:
     name: nginx
     repo: http://nginx.org/packages/sles/{{ ansible_facts.distribution_major_version }}
     state: present
@@ -9,6 +9,6 @@
   when: nginx_zypper_repo_enabled | bool
 
 - name: Ensure nginx is installed.
-  package:
+  ansible.builtin.package:
     name: "{{ nginx_package_name }}"
     state: present

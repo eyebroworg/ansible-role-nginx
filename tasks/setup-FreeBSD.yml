@@ -1,17 +1,17 @@
 ---
 - name: Update pkg cache.
-  command: pkg update -f
+  ansible.builtin.command: pkg update -f
   environment:
     ASSUME_ALWAYS_YES: "yes"
-  tags: ['skip_ansible_lint']
+  changed_when: false
 
 - name: Ensure nginx is installed.
-  pkgng:
+  community.general.pkgng:
     name: "{{ nginx_package_name }}"
     state: present
 
 - name: Create logs directory.
-  file:
+  ansible.builtin.file:
     path: /var/log/nginx
     state: directory
-    mode: 0755
+    mode: "0755"

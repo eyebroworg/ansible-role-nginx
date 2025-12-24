@@ -18,7 +18,7 @@
         owner: root
         group: root
         mode: '0644'
-      notify: apply sysctl settings
+      notify: Apply sysctl settings
 
     - name: Apply sysctl settings immediately
       ansible.builtin.command: sysctl -p {{ nginx_sysctl_config_file }}

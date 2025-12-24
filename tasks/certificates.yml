@@ -25,7 +25,7 @@
       loop: "{{ nginx_vault_certificates }}"
       loop_control:
         label: "{{ item.domain }}"
-      notify: reload nginx
+      notify: Reload nginx
       no_log: true
 
     - name: Deploy SSL private keys
@@ -38,5 +38,5 @@
       loop: "{{ nginx_vault_certificates }}"
       loop_control:
         label: "{{ item.domain }}"
-      notify: reload nginx
+      notify: Reload nginx
       no_log: true

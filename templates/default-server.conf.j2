@@ -5,7 +5,9 @@
 # HTTP default server
 server {
     listen 80 default_server;
+{% if nginx_listen_ipv6 %}
     listen [::]:80 default_server;
+{% endif %}
     server_name _;
     return {{ nginx_default_server_return }};
 }
@@ -14,7 +16,9 @@ server {
 # HTTPS default server
 server {
     listen 443 ssl default_server;
+{% if nginx_listen_ipv6 %}
     listen [::]:443 ssl default_server;
+{% endif %}
     server_name _;
 
     ssl_certificate {{ nginx_ssl_certs_path }}/default/cert.pem;

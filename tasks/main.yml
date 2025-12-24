@@ -1,70 +1,84 @@
 ---
 # Variable setup.
 - name: Include OS-specific variables.
-  include_vars: "{{ ansible_facts.os_family }}.yml"
+  ansible.builtin.include_vars: "{{ ansible_facts.os_family }}.yml"
 
 - name: Define nginx_user.
-  set_fact:
+  ansible.builtin.set_fact:
     nginx_user: "{{ __nginx_user }}"
   when: nginx_user is not defined
 
 # Setup/install tasks.
-- include_tasks: setup-RedHat.yml
+- name: Include RedHat/Rocky/AlmaLinux setup tasks.
+  ansible.builtin.include_tasks: setup-RedHat.yml
   when: ansible_facts.os_family == 'RedHat' or ansible_facts.os_family == 'Rocky' or ansible_facts.os_family == 'AlmaLinux'
 
-- include_tasks: setup-Ubuntu.yml
+- name: Include Ubuntu setup tasks.
+  ansible.builtin.include_tasks: setup-Ubuntu.yml
   when: ansible_facts.distribution == 'Ubuntu'
 
-- include_tasks: setup-Debian.yml
+- name: Include Debian setup tasks.
+  ansible.builtin.include_tasks: setup-Debian.yml
   when: ansible_facts.os_family == 'Debian'
 
-- include_tasks: setup-FreeBSD.yml
+- name: Include FreeBSD setup tasks.
+  ansible.builtin.include_tasks: setup-FreeBSD.yml
   when: ansible_facts.os_family == 'FreeBSD'
 
-- include_tasks: setup-OpenBSD.yml
+- name: Include OpenBSD setup tasks.
+  ansible.builtin.include_tasks: setup-OpenBSD.yml
   when: ansible_facts.os_family == 'OpenBSD'
 
-- include_tasks: setup-Archlinux.yml
+- name: Include Archlinux setup tasks.
+  ansible.builtin.include_tasks: setup-Archlinux.yml
   when: ansible_facts.os_family == 'Archlinux'
 
-- include_tasks: setup-Suse.yml
+- name: Include Suse setup tasks.
+  ansible.builtin.include_tasks: setup-Suse.yml
   when: ansible_facts.os_family == 'Suse'
 
 # Linux kernel optimization (optional).
-- import_tasks: kernel-optimization.yml
+- name: Import kernel optimization tasks.
+  ansible.builtin.import_tasks: kernel-optimization.yml
 
 # SSL/TLS security configuration.
-- import_tasks: ssl-security.yml
+- name: Import SSL/TLS security tasks.
+  ansible.builtin.import_tasks: ssl-security.yml
 
 # Certificate distribution.
-- import_tasks: certificates.yml
+- name: Import certificate distribution tasks.
+  ansible.builtin.import_tasks: certificates.yml
 
 # Logrotate configuration.
-- import_tasks: logrotate.yml
+- name: Import logrotate configuration tasks.
+  ansible.builtin.import_tasks: logrotate.yml
 
 # Cloudflare integration (optional).
-- import_tasks: cloudflare.yml
+- name: Import Cloudflare integration tasks.
+  ansible.builtin.import_tasks: cloudflare.yml
 
 # Detect nginx version for feature compatibility.
-- import_tasks: version-check.yml
+- name: Import version check tasks.
+  ansible.builtin.import_tasks: version-check.yml
 
 # Vhost configuration.
-- import_tasks: vhosts.yml
+- name: Import vhost configuration tasks.
+  ansible.builtin.import_tasks: vhosts.yml
 
 # Nginx setup.
 - name: Copy nginx configuration in place.
-  template:
+  ansible.builtin.template:
     src: "{{ nginx_conf_template }}"
     dest: "{{ nginx_conf_file_path }}"
     owner: root
     group: "{{ root_group }}"
-    mode: 0644
+    mode: "0644"
     validate: nginx -t -c %s
   notify:
-    - reload nginx
+    - Reload nginx
 
 - name: Ensure nginx service is running as configured.
-  service:
+  ansible.builtin.service:
     name: nginx
     state: "{{ nginx_service_state }}"
     enabled: "{{ nginx_service_enabled }}"

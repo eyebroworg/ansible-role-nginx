@@ -6,30 +6,32 @@ galaxy_info:
   author: eyebrowkang
   description: Nginx installation for Linux, FreeBSD and OpenBSD. (forked from geerlingguy/ansible-role-nginx)
   license: "license (BSD, MIT)"
-  min_ansible_version: 2.16
+  min_ansible_version: "2.16"
   platforms:
     - name: Debian
       versions:
         - all
     - name: Ubuntu
       versions:
-        - trusty
-        - xenial
         - focal
-    - name: Archlinux
+        - jammy
+        - noble
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+    - name: SLES
+      versions:
+        - all
+    - name: ArchLinux
       versions:
         - all
     - name: FreeBSD
       versions:
-        - 10.3
-        - 10.2
-        - 10.1
-        - 10.0
-        - 9.3
+        - all
     - name: OpenBSD
       versions:
-        - 5.9
-        - 6.0
+        - all
   galaxy_tags:
     - development
     - web
