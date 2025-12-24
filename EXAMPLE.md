@@ -304,14 +304,12 @@ nginx_vhosts:
 
 ## Advanced Configuration
 
-### Backup Existing Configuration
+### Cleanup Existing Configuration (Backup + Clean Deploy)
 
-When migrating from an existing nginx setup, enable backup to preserve old configs:
+If you want a clean slate and full state convergence, enable cleanup. This backs up current configs and removes them before deploying. Recommended to run it once via CLI:
 
-```yaml
-# Backup existing configs before deploying
-# Creates timestamped backups in /etc/nginx/backup/
-nginx_backup_existing_config: true
+```bash
+ansible-playbook site.yml -e nginx_cleanup_existing_config=true
 ```
 
 ### Gzip Compression
@@ -378,9 +376,10 @@ A comprehensive example combining multiple features for a production deployment:
 # Production nginx configuration
 
 # =============================================================================
-# Backup & Cleanup
+# Cleanup (backup + clean deploy)
 # =============================================================================
-nginx_backup_existing_config: true  # Backup existing config on first run
+# Recommended to run once via CLI:
+# ansible-playbook site.yml -e nginx_cleanup_existing_config=true
 
 # =============================================================================
 # Performance

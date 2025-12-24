@@ -103,10 +103,10 @@ nginx_listen_ipv6: true
 # =============================================================================
 # Configuration Management
 # =============================================================================
-# Backup existing nginx configuration before deploying
-# When enabled, creates a timestamped backup in /etc/nginx/backup/
-# This ensures you can always restore the previous configuration
-nginx_backup_existing_config: false
+# Cleanup existing nginx configuration before deploying (fresh install behavior)
+# When enabled, creates a timestamped backup in /etc/nginx/backup/ and
+# removes existing configs before deploying new ones.
+nginx_cleanup_existing_config: false
 
 nginx_vhosts: []
 # Vhost configuration options:

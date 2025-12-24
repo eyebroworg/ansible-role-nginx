@@ -1,9 +1,9 @@
 ---
 # =============================================================================
-# Configuration Backup
+# Configuration Cleanup (Backup + Clean Deploy)
 # =============================================================================
-- name: Backup existing nginx configuration.
-  when: nginx_backup_existing_config | bool
+- name: Backup and cleanup existing nginx configuration.
+  when: nginx_cleanup_existing_config | bool
   block:
     - name: Create backup directory.
       ansible.builtin.file:
@@ -22,10 +22,23 @@
         path: "{{ nginx_conf_path }}"
       register: _conf_d_stat
 
+    - name: Check if nginx.conf exists.
+      ansible.builtin.stat:
+        path: "{{ nginx_conf_file_path }}"
+      register: _nginx_conf_stat
+
     - name: Check if vhost directory exists.
       ansible.builtin.stat:
         path: "{{ nginx_vhost_path }}"
       register: _vhost_stat
+
+    - name: Backup nginx.conf file.
+      ansible.builtin.copy:
+        src: "{{ nginx_conf_file_path }}"
+        dest: "{{ nginx_conf_file_path | dirname }}/backup/nginx.conf-{{ _backup_timestamp }}"
+        remote_src: true
+        mode: preserve
+      when: _nginx_conf_stat.stat.exists
 
     - name: Backup conf.d directory.
       ansible.builtin.copy:
@@ -62,6 +75,14 @@
 # =============================================================================
 # Vhost Directory Setup
 # =============================================================================
+- name: Ensure nginx_conf_path exists.
+  ansible.builtin.file:
+    path: "{{ nginx_conf_path }}"
+    state: directory
+    mode: "0755"
+  when: nginx_conf_path != nginx_vhost_path
+  notify: Reload nginx
+
 - name: Remove default nginx vhost config file (if configured).
   ansible.builtin.file:
     path: "{{ nginx_default_vhost_path }}"
