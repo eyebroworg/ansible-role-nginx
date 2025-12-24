@@ -53,10 +53,6 @@
 - name: Import logrotate configuration tasks.
   ansible.builtin.import_tasks: logrotate.yml
 
-# Cloudflare integration (optional).
-- name: Import Cloudflare integration tasks.
-  ansible.builtin.import_tasks: cloudflare.yml
-
 # Detect nginx version for feature compatibility.
 - name: Import version check tasks.
   ansible.builtin.import_tasks: version-check.yml
@@ -76,6 +72,10 @@
     validate: nginx -t -c %s
   notify:
     - Reload nginx
+
+# Cloudflare integration (must run after nginx.conf is deployed).
+- name: Import Cloudflare integration tasks.
+  ansible.builtin.import_tasks: cloudflare.yml
 
 - name: Ensure nginx service is running as configured.
   ansible.builtin.service:

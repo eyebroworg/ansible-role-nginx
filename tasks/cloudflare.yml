@@ -19,7 +19,7 @@
             mode: '0755'
 
         - name: Run Cloudflare IP update script initially
-          ansible.builtin.command: "{{ nginx_cloudflare_ip_update_script }}"
+          ansible.builtin.command: "{{ nginx_cloudflare_ip_update_script }} --no-reload"
           args:
             creates: "{{ nginx_cloudflare_real_ip_config }}"
           notify: Reload nginx

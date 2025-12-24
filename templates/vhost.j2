@@ -1,13 +1,41 @@
 {% block server_redirect %}
 {% if item.server_name_redirect is defined %}
+{% set _primary_domain = item.server_name.split(' ')[0] %}
+{# HTTP redirect server block #}
 server {
-    listen       {{ item.listen | default('80') }};
+    listen       80;
 {% if nginx_listen_ipv6 %}
-    listen       [::]:{{ item.listen | default('80') }};
+    listen       [::]:80;
 {% endif %}
     server_name  {{ item.server_name_redirect }};
-    return       301 $scheme://{{ item.server_name.split(' ')[0] }}$request_uri;
+{% if item.ssl is defined and item.ssl | bool %}
+    return       301 https://{{ _primary_domain }}$request_uri;
+{% else %}
+    return       301 $scheme://{{ _primary_domain }}$request_uri;
+{% endif %}
 }
+{% if item.ssl is defined and item.ssl | bool %}
+{# HTTPS redirect server block (only when SSL is enabled) #}
+server {
+    listen       {{ item.listen | default('443') }} ssl;
+{% if nginx_listen_ipv6 %}
+    listen       [::]:{{ item.listen | default('443') }} ssl;
+{% endif %}
+    server_name  {{ item.server_name_redirect }};
+
+    # SSL Certificate (same as main server)
+{% if item.ssl_certificate is defined %}
+    ssl_certificate {{ item.ssl_certificate }};
+    ssl_certificate_key {{ item.ssl_certificate_key }};
+{% elif item.ssl_domain is defined %}
+    ssl_certificate {{ nginx_ssl_certs_path }}/{{ item.ssl_domain }}/cert.pem;
+    ssl_certificate_key {{ nginx_ssl_certs_path }}/{{ item.ssl_domain }}/key.pem;
+{% endif %}
+    include {{ nginx_conf_path }}/ssl-params.conf;
+
+    return       301 https://{{ _primary_domain }}$request_uri;
+}
+{% endif %}
 {% endif %}
 {% endblock %}
 

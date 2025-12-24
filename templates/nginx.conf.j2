@@ -47,7 +47,15 @@ http {
 {% endblock %}
 
 {% block http_gzip %}
-    # gzip on;
+{% if nginx_gzip_enabled | default(true) %}
+    # Gzip compression
+    gzip on;
+    gzip_comp_level {{ nginx_gzip_comp_level | default('5') }};
+    gzip_min_length {{ nginx_gzip_min_length | default('256') }};
+    gzip_proxied {{ nginx_gzip_proxied | default('any') }};
+    gzip_vary {{ nginx_gzip_vary | default('on') }};
+    gzip_types {{ nginx_gzip_types | default(['text/plain', 'text/css', 'application/json', 'application/javascript', 'text/xml', 'application/xml', 'image/svg+xml']) | join(' ') }};
+{% endif %}
 {% endblock %}
 
 {% if nginx_extra_http_options %}

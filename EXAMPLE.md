@@ -1,58 +1,33 @@
 # Configuration Examples
 
-This document provides configuration examples for various deployment scenarios.
+This document provides practical configuration examples for common deployment scenarios.
 
 ## Table of Contents
 
-- [Basic Usage](#basic-usage)
-- [SSL/TLS Configuration](#ssltls-configuration)
+- [Quick Start](#quick-start)
+- [Domain Redirects](#domain-redirects)
 - [Cloudflare Integration](#cloudflare-integration)
-- [Mixed Environment](#mixed-environment)
 - [Reverse Proxy](#reverse-proxy)
-- [Certificate Distribution via Vault](#certificate-distribution-via-vault)
-- [Performance Optimization](#performance-optimization)
+- [Advanced Configuration](#advanced-configuration)
 - [Complete Production Example](#complete-production-example)
 
 ---
 
-## Basic Usage
+## Quick Start
 
-### Simple HTTP Website
+### Pure HTTP Website
+
+The simplest configuration - a static website served over HTTP:
 
 ```yaml
 nginx_vhosts:
-  - server_name: "example.com www.example.com"
+  - server_name: "example.com"
     root: "/var/www/example.com"
-    index: "index.html index.htm"
 ```
 
-### Multiple HTTP Websites
+### Pure HTTPS Website
 
-```yaml
-nginx_vhosts:
-  - server_name: "site1.example.com"
-    root: "/var/www/site1"
-
-  - server_name: "site2.example.com"
-    root: "/var/www/site2"
-
-  - server_name: "site3.example.com"
-    root: "/var/www/site3"
-```
-
-### HTTP to HTTPS Redirect Only
-
-```yaml
-nginx_vhosts:
-  - server_name: "example.com www.example.com"
-    return: "301 https://example.com$request_uri"
-```
-
----
-
-## SSL/TLS Configuration
-
-### Single HTTPS Website with Custom Certificate Path
+A secure website with SSL/TLS. Certificate can be from Let's Encrypt or any CA:
 
 ```yaml
 nginx_vhosts:
@@ -63,212 +38,86 @@ nginx_vhosts:
     root: "/var/www/example.com"
 ```
 
-### HTTPS Website Using Vault-Distributed Certificate
+### HTTPS with Certificate from Vault
+
+Distribute certificates securely via Ansible Vault:
 
 ```yaml
-# Certificate distribution
+# In your vault file (vault.yml):
+# vault_example_com_cert: |
+#   -----BEGIN CERTIFICATE-----
+#   ...
+#   -----END CERTIFICATE-----
+# vault_example_com_key: |
+#   -----BEGIN PRIVATE KEY-----
+#   ...
+#   -----END PRIVATE KEY-----
+
 nginx_vault_certificates:
   - domain: "example.com"
-    cert: "{{ vault_example_com_fullchain }}"
+    cert: "{{ vault_example_com_cert }}"
     key: "{{ vault_example_com_key }}"
 
-# Vhost configuration
 nginx_vhosts:
   - server_name: "example.com"
     ssl: true
-    ssl_domain: "example.com"
+    ssl_domain: "example.com"  # Uses cert from nginx_vault_certificates
     root: "/var/www/example.com"
-```
-
-### Multiple HTTPS Websites
-
-```yaml
-nginx_vault_certificates:
-  - domain: "site1.example.com"
-    cert: "{{ vault_site1_fullchain }}"
-    key: "{{ vault_site1_key }}"
-
-  - domain: "site2.example.com"
-    cert: "{{ vault_site2_fullchain }}"
-    key: "{{ vault_site2_key }}"
-
-nginx_vhosts:
-  - server_name: "site1.example.com"
-    ssl: true
-    ssl_domain: "site1.example.com"
-    root: "/var/www/site1"
-
-  - server_name: "site2.example.com"
-    ssl: true
-    ssl_domain: "site2.example.com"
-    root: "/var/www/site2"
-```
-
-### Disable HTTP/2
-
-```yaml
-nginx_vhosts:
-  - server_name: "legacy.example.com"
-    ssl: true
-    http2: false
-    ssl_domain: "legacy.example.com"
-    root: "/var/www/legacy"
-```
-
-### Use Intermediate SSL Policy (TLSv1.2 + TLSv1.3)
-
-```yaml
-# For compatibility with older clients
-nginx_ssl_policy: "intermediate"
-```
-
-### Disable HSTS
-
-```yaml
-nginx_hsts_enabled: false
 ```
 
 ---
 
-## Cloudflare Integration
+## Domain Redirects
 
-### All Websites Behind Cloudflare
+### WWW to Non-WWW Redirect (HTTPS)
+
+Redirect `www.example.com` to `example.com`. The `server_name_redirect` option handles both HTTP and HTTPS redirects automatically:
 
 ```yaml
-# Enable Cloudflare integration
-nginx_cloudflare_enabled: true
-nginx_cloudflare_real_ip_enabled: true
-nginx_cloudflare_origin_pull_enabled: true
-
-# Certificates
 nginx_vault_certificates:
-  - domain: "site1.example.com"
-    cert: "{{ vault_site1_fullchain }}"
-    key: "{{ vault_site1_key }}"
-
-  - domain: "site2.example.com"
-    cert: "{{ vault_site2_fullchain }}"
-    key: "{{ vault_site2_key }}"
-
-  - domain: "site3.example.com"
-    cert: "{{ vault_site3_fullchain }}"
-    key: "{{ vault_site3_key }}"
-
-# All vhosts use Cloudflare Authenticated Origin Pulls
-nginx_vhosts:
-  - server_name: "site1.example.com"
-    ssl: true
-    ssl_domain: "site1.example.com"
-    ssl_client_certificate: "{{ nginx_cloudflare_origin_pull_cert_path }}"
-    root: "/var/www/site1"
-
-  - server_name: "site2.example.com"
-    ssl: true
-    ssl_domain: "site2.example.com"
-    ssl_client_certificate: "{{ nginx_cloudflare_origin_pull_cert_path }}"
-    root: "/var/www/site2"
-
-  - server_name: "site3.example.com"
-    ssl: true
-    ssl_domain: "site3.example.com"
-    ssl_client_certificate: "{{ nginx_cloudflare_origin_pull_cert_path }}"
-    root: "/var/www/site3"
-```
-
-### Cloudflare Without Authenticated Origin Pulls
-
-If you only need real IP restoration without client certificate verification:
-
-```yaml
-nginx_cloudflare_enabled: true
-nginx_cloudflare_real_ip_enabled: true
-nginx_cloudflare_origin_pull_enabled: false
+  - domain: "example.com"
+    cert: "{{ vault_example_com_cert }}"
+    key: "{{ vault_example_com_key }}"
 
 nginx_vhosts:
   - server_name: "example.com"
     ssl: true
     ssl_domain: "example.com"
+    server_name_redirect: "www.example.com"  # www -> non-www
     root: "/var/www/example.com"
 ```
 
-### Custom Cloudflare IP Update Schedule
+**What this generates:**
+- HTTP `www.example.com` → 301 → `https://example.com`
+- HTTPS `www.example.com` → 301 → `https://example.com`
+- Main site served at `https://example.com`
+
+### Non-WWW to WWW Redirect (HTTPS)
+
+Redirect `example.com` to `www.example.com`:
 
 ```yaml
-nginx_cloudflare_enabled: true
-nginx_cloudflare_ip_update_calendar: "weekly"  # Options: daily, weekly, monthly, or systemd calendar syntax
-```
-
----
-
-## Mixed Environment
-
-### Some Sites Behind Cloudflare, Some Direct
-
-```yaml
-# Enable Cloudflare for real IP (applies to all sites)
-nginx_cloudflare_enabled: true
-nginx_cloudflare_real_ip_enabled: true
-nginx_cloudflare_origin_pull_enabled: true
-
 nginx_vault_certificates:
-  - domain: "public.example.com"
-    cert: "{{ vault_public_fullchain }}"
-    key: "{{ vault_public_key }}"
-
-  - domain: "admin.example.com"
-    cert: "{{ vault_admin_fullchain }}"
-    key: "{{ vault_admin_key }}"
-
-  - domain: "api.example.com"
-    cert: "{{ vault_api_fullchain }}"
-    key: "{{ vault_api_key }}"
+  - domain: "www.example.com"
+    cert: "{{ vault_www_example_com_cert }}"
+    key: "{{ vault_www_example_com_key }}"
 
 nginx_vhosts:
-  # Public site - behind Cloudflare with Origin Pulls
-  - server_name: "public.example.com"
+  - server_name: "www.example.com"
     ssl: true
-    ssl_domain: "public.example.com"
-    ssl_client_certificate: "{{ nginx_cloudflare_origin_pull_cert_path }}"
-    root: "/var/www/public"
-
-  # Admin panel - NOT behind Cloudflare (direct access)
-  - server_name: "admin.example.com"
-    ssl: true
-    ssl_domain: "admin.example.com"
-    # No ssl_client_certificate - direct HTTPS access
-    root: "/var/www/admin"
-    extra_parameters: |
-      # Restrict to specific IPs
-      allow 10.0.0.0/8;
-      allow 192.168.1.0/24;
-      deny all;
-
-  # API - behind Cloudflare with Origin Pulls
-  - server_name: "api.example.com"
-    ssl: true
-    ssl_domain: "api.example.com"
-    ssl_client_certificate: "{{ nginx_cloudflare_origin_pull_cert_path }}"
-    root: "/var/www/api"
+    ssl_domain: "www.example.com"
+    server_name_redirect: "example.com"  # non-www -> www
+    root: "/var/www/example.com"
 ```
 
-### HTTP and HTTPS Mixed
+### HTTP to HTTPS Redirect Only
+
+If you only need to redirect HTTP to HTTPS (no domain change):
 
 ```yaml
 nginx_vhosts:
-  # HTTPS site
-  - server_name: "secure.example.com"
-    ssl: true
-    ssl_domain: "secure.example.com"
-    root: "/var/www/secure"
-
-  # HTTP only (internal service)
-  - server_name: "internal.example.local"
-    listen: "80"
-    root: "/var/www/internal"
-
-  # HTTP redirect to HTTPS
-  - server_name: "example.com www.example.com"
-    listen: "80"
+  # HTTP redirect
+  - server_name: "example.com"
     return: "301 https://example.com$request_uri"
 
   # HTTPS main site
@@ -276,6 +125,101 @@ nginx_vhosts:
     ssl: true
     ssl_domain: "example.com"
     root: "/var/www/example.com"
+```
+
+### Multiple Domains to Single Site
+
+Redirect multiple domains to a canonical domain:
+
+```yaml
+nginx_vhosts:
+  # Main site
+  - server_name: "example.com"
+    ssl: true
+    ssl_domain: "example.com"
+    server_name_redirect: "www.example.com example.net www.example.net"
+    root: "/var/www/example.com"
+```
+
+---
+
+## Cloudflare Integration
+
+### Basic Cloudflare Setup (Real IP Only)
+
+Restore real visitor IPs when behind Cloudflare:
+
+```yaml
+nginx_cloudflare_enabled: true
+nginx_cloudflare_real_ip_enabled: true
+
+nginx_vhosts:
+  - server_name: "example.com"
+    ssl: true
+    ssl_domain: "example.com"
+    root: "/var/www/example.com"
+```
+
+### Cloudflare with Authenticated Origin Pulls
+
+Maximum security - only accept connections from Cloudflare:
+
+```yaml
+nginx_cloudflare_enabled: true
+nginx_cloudflare_real_ip_enabled: true
+nginx_cloudflare_origin_pull_enabled: true
+
+nginx_vhosts:
+  - server_name: "example.com"
+    ssl: true
+    ssl_domain: "example.com"
+    ssl_client_certificate: "{{ nginx_cloudflare_origin_pull_cert_path }}"
+    root: "/var/www/example.com"
+```
+
+### HTTPS + WWW Redirect + Cloudflare (Complete Example)
+
+A common production setup:
+
+```yaml
+nginx_cloudflare_enabled: true
+nginx_cloudflare_real_ip_enabled: true
+nginx_cloudflare_origin_pull_enabled: true
+
+nginx_vault_certificates:
+  - domain: "example.com"
+    cert: "{{ vault_example_com_cert }}"
+    key: "{{ vault_example_com_key }}"
+
+nginx_vhosts:
+  - server_name: "example.com"
+    ssl: true
+    ssl_domain: "example.com"
+    ssl_client_certificate: "{{ nginx_cloudflare_origin_pull_cert_path }}"
+    server_name_redirect: "www.example.com"
+    root: "/var/www/example.com"
+```
+
+### Mixed Environment (Some Sites Behind Cloudflare)
+
+```yaml
+nginx_cloudflare_enabled: true
+nginx_cloudflare_origin_pull_enabled: true
+
+nginx_vhosts:
+  # Public site - behind Cloudflare
+  - server_name: "www.example.com"
+    ssl: true
+    ssl_domain: "www.example.com"
+    ssl_client_certificate: "{{ nginx_cloudflare_origin_pull_cert_path }}"
+    root: "/var/www/public"
+
+  # Admin panel - direct access (NOT behind Cloudflare)
+  - server_name: "admin.example.com"
+    ssl: true
+    ssl_domain: "admin.example.com"
+    # No ssl_client_certificate = direct HTTPS access
+    root: "/var/www/admin"
 ```
 
 ---
@@ -286,7 +230,7 @@ nginx_vhosts:
 
 ```yaml
 nginx_upstreams:
-  - name: app_backend
+  - name: app
     servers:
       - "127.0.0.1:3000"
 
@@ -296,7 +240,7 @@ nginx_vhosts:
     ssl_domain: "app.example.com"
     extra_parameters: |
       location / {
-          proxy_pass http://app_backend;
+          proxy_pass http://app;
           proxy_http_version 1.1;
           proxy_set_header Host $host;
           proxy_set_header X-Real-IP $remote_addr;
@@ -315,8 +259,7 @@ nginx_upstreams:
     servers:
       - "10.0.1.10:8080"
       - "10.0.1.11:8080"
-      - "10.0.1.12:8080 weight=2"
-      - "10.0.1.13:8080 backup"
+      - "10.0.1.12:8080 backup"
 
 nginx_vhosts:
   - server_name: "app.example.com"
@@ -331,200 +274,159 @@ nginx_vhosts:
           proxy_set_header X-Real-IP $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto $scheme;
-
-          # Timeouts
-          proxy_connect_timeout 60s;
-          proxy_send_timeout 60s;
-          proxy_read_timeout 60s;
       }
 ```
 
-### Multiple Applications with Different Backends
+### WebSocket Support
 
 ```yaml
 nginx_upstreams:
-  - name: frontend
-    servers:
-      - "127.0.0.1:3000"
-
-  - name: api
-    strategy: "ip_hash"
-    servers:
-      - "127.0.0.1:8080"
-      - "127.0.0.1:8081"
-
   - name: websocket
     servers:
       - "127.0.0.1:9000"
 
 nginx_vhosts:
-  - server_name: "example.com"
+  - server_name: "ws.example.com"
     ssl: true
-    ssl_domain: "example.com"
+    ssl_domain: "ws.example.com"
     extra_parameters: |
-      # Frontend
       location / {
-          proxy_pass http://frontend;
-          proxy_set_header Host $host;
-          proxy_set_header X-Real-IP $remote_addr;
-      }
-
-      # API
-      location /api/ {
-          proxy_pass http://api;
-          proxy_set_header Host $host;
-          proxy_set_header X-Real-IP $remote_addr;
-      }
-
-      # WebSocket
-      location /ws/ {
           proxy_pass http://websocket;
           proxy_http_version 1.1;
           proxy_set_header Upgrade $http_upgrade;
           proxy_set_header Connection "upgrade";
           proxy_set_header Host $host;
+          proxy_read_timeout 86400;
       }
 ```
 
 ---
 
-## Certificate Distribution via Vault
+## Advanced Configuration
 
-### Define Certificates in Vault
+### Backup Existing Configuration
 
-In your Ansible Vault file (e.g., `vault.yml`):
+When migrating from an existing nginx setup, enable backup to preserve old configs:
 
 ```yaml
-# Fullchain certificate (server cert + intermediate CA chain)
-# This is the recommended format for ssl_certificate
-vault_example_com_fullchain: |
-  -----BEGIN CERTIFICATE-----
-  MIIFazCCBFOgAwIBAgISA... (your server certificate)
-  -----END CERTIFICATE-----
-  -----BEGIN CERTIFICATE-----
-  MIIFFjCCAv6gAwIBAgIRAJ... (intermediate CA certificate)
-  -----END CERTIFICATE-----
-
-# Private key
-vault_example_com_key: |
-  -----BEGIN PRIVATE KEY-----
-  MIIEvgIBADANBgkqhkiG9w...
-  -----END PRIVATE KEY-----
+# Backup existing configs before deploying
+# Creates timestamped backups in /etc/nginx/backup/
+nginx_backup_existing_config: true
 ```
 
-### Use in Playbook
+### Gzip Compression
+
+Gzip is enabled by default. To customize:
 
 ```yaml
-nginx_vault_certificates:
-  - domain: "example.com"
-    cert: "{{ vault_example_com_fullchain }}"
-    key: "{{ vault_example_com_key }}"
+# Disable gzip
+nginx_gzip_enabled: false
 
-nginx_vhosts:
-  - server_name: "example.com"
-    ssl: true
-    ssl_domain: "example.com"
-    root: "/var/www/example.com"
+# Or customize settings
+nginx_gzip_enabled: true
+nginx_gzip_comp_level: "6"
+nginx_gzip_min_length: "1024"
 ```
 
----
-
-## Performance Optimization
-
-### Enable Kernel Optimization
+### SSL/TLS Policy
 
 ```yaml
-# Enable Linux kernel optimization for web server workloads
-nginx_kernel_optimization_enabled: true
+# Modern (TLSv1.3 only) - recommended for new deployments
+nginx_ssl_policy: "modern"
+
+# Intermediate (TLSv1.2 + TLSv1.3) - for legacy client compatibility
+nginx_ssl_policy: "intermediate"
 ```
 
-### Custom Worker Configuration
+### Performance Tuning
 
 ```yaml
+# Worker processes (default: auto-detected CPU count)
 nginx_worker_processes: "auto"
 nginx_worker_connections: "4096"
 nginx_multi_accept: "on"
+
+# Keepalive settings
+nginx_keepalive_timeout: "65"
+nginx_keepalive_requests: "1000"
+
+# Linux kernel optimization
+nginx_kernel_optimization_enabled: true
 ```
 
-### Enable Proxy Cache
-
-```yaml
-nginx_proxy_cache_path: "levels=1:2 keys_zone=cache_zone:10m max_size=1g inactive=60m use_temp_path=off"
-
-nginx_vhosts:
-  - server_name: "cached.example.com"
-    ssl: true
-    ssl_domain: "cached.example.com"
-    extra_parameters: |
-      location / {
-          proxy_pass http://backend;
-          proxy_cache cache_zone;
-          proxy_cache_valid 200 60m;
-          proxy_cache_valid 404 1m;
-          add_header X-Cache-Status $upstream_cache_status;
-      }
-```
-
-### Custom Logrotate Settings
+### Logrotate Settings
 
 ```yaml
 nginx_logrotate_enabled: true
 nginx_logrotate_days: 30  # Keep logs for 30 days
 ```
 
+### Disable IPv6
+
+```yaml
+nginx_listen_ipv6: false
+```
+
 ---
 
 ## Complete Production Example
 
-A comprehensive example combining multiple features:
+A comprehensive example combining multiple features for a production deployment:
 
 ```yaml
 ---
 # Production nginx configuration
 
-# Kernel optimization (Linux only)
+# =============================================================================
+# Backup & Cleanup
+# =============================================================================
+nginx_backup_existing_config: true  # Backup existing config on first run
+
+# =============================================================================
+# Performance
+# =============================================================================
 nginx_kernel_optimization_enabled: true
+nginx_worker_processes: "auto"
+nginx_worker_connections: "4096"
+nginx_multi_accept: "on"
 
-# SSL/TLS settings
-nginx_ssl_policy: "modern"  # TLSv1.3 only
-nginx_hsts_enabled: true
-
+# =============================================================================
 # Security
+# =============================================================================
+nginx_ssl_policy: "modern"
+nginx_hsts_enabled: true
 nginx_server_tokens: "off"
 nginx_default_server_enabled: true
 nginx_default_server_return: "444"
 
-# Performance
-nginx_worker_processes: "auto"
-nginx_worker_connections: "4096"
-nginx_keepalive_timeout: "65"
-nginx_keepalive_requests: "1000"
+# =============================================================================
+# Gzip (enabled by default)
+# =============================================================================
+nginx_gzip_enabled: true
+nginx_gzip_comp_level: "5"
 
-# Cloudflare integration
+# =============================================================================
+# Cloudflare
+# =============================================================================
 nginx_cloudflare_enabled: true
 nginx_cloudflare_real_ip_enabled: true
 nginx_cloudflare_origin_pull_enabled: true
-nginx_cloudflare_ip_update_calendar: "daily"
 
-# Logrotate
-nginx_logrotate_enabled: true
-nginx_logrotate_days: 30
-
-# Certificates from vault (use fullchain for cert)
+# =============================================================================
+# Certificates
+# =============================================================================
 nginx_vault_certificates:
-  - domain: "www.example.com"
-    cert: "{{ vault_www_fullchain }}"
-    key: "{{ vault_www_key }}"
+  - domain: "example.com"
+    cert: "{{ vault_example_com_cert }}"
+    key: "{{ vault_example_com_key }}"
 
   - domain: "api.example.com"
-    cert: "{{ vault_api_fullchain }}"
+    cert: "{{ vault_api_cert }}"
     key: "{{ vault_api_key }}"
 
-  - domain: "admin.example.com"
-    cert: "{{ vault_admin_fullchain }}"
-    key: "{{ vault_admin_key }}"
-
+# =============================================================================
 # Upstreams
+# =============================================================================
 nginx_upstreams:
   - name: web_backend
     strategy: "least_conn"
@@ -534,24 +436,19 @@ nginx_upstreams:
       - "127.0.0.1:3001"
 
   - name: api_backend
-    strategy: "ip_hash"
     servers:
       - "127.0.0.1:8080"
-      - "127.0.0.1:8081"
 
-# Virtual hosts
+# =============================================================================
+# Virtual Hosts
+# =============================================================================
 nginx_vhosts:
-  # HTTP to HTTPS redirect
-  - server_name: "example.com www.example.com"
-    listen: "80"
-    return: "301 https://www.example.com$request_uri"
-    filename: "example.com-redirect.conf"
-
-  # Main website (behind Cloudflare)
-  - server_name: "www.example.com"
+  # Main website with www redirect
+  - server_name: "example.com"
     ssl: true
-    ssl_domain: "www.example.com"
+    ssl_domain: "example.com"
     ssl_client_certificate: "{{ nginx_cloudflare_origin_pull_cert_path }}"
+    server_name_redirect: "www.example.com"
     extra_parameters: |
       location / {
           proxy_pass http://web_backend;
@@ -569,7 +466,7 @@ nginx_vhosts:
           add_header Cache-Control "public, immutable";
       }
 
-  # API (behind Cloudflare)
+  # API server
   - server_name: "api.example.com"
     ssl: true
     ssl_domain: "api.example.com"
@@ -582,61 +479,41 @@ nginx_vhosts:
           proxy_set_header X-Real-IP $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto $scheme;
-
-          # CORS headers
-          add_header Access-Control-Allow-Origin "*" always;
-          add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
       }
 
-  # Admin panel (direct access, not behind Cloudflare)
-  - server_name: "admin.example.com"
-    ssl: true
-    ssl_domain: "admin.example.com"
-    root: "/var/www/admin"
-    extra_parameters: |
-      # IP whitelist
-      allow 10.0.0.0/8;
-      allow 192.168.0.0/16;
-      deny all;
-
-      location / {
-          try_files $uri $uri/ /index.html;
-      }
-
-# Remove default vhost from package installation
-nginx_remove_default_vhost: true
+# =============================================================================
+# Logrotate
+# =============================================================================
+nginx_logrotate_enabled: true
+nginx_logrotate_days: 30
 ```
 
 ---
 
 ## Disabling Features
 
-### Disable Default Server Block
-
 ```yaml
+# Disable default server block (catches unmatched requests)
 nginx_default_server_enabled: false
-```
 
-### Disable DH Parameters
-
-```yaml
+# Disable DH parameters generation
 nginx_ssl_dhparam_enabled: false
-```
 
-### Disable Self-signed Default Certificate
-
-```yaml
+# Disable self-signed default certificate
 nginx_ssl_default_cert_enabled: false
-```
 
-### Disable Logrotate Management
+# Disable HSTS header
+nginx_hsts_enabled: false
 
-```yaml
-nginx_logrotate_enabled: false
-```
-
-### Disable OCSP Stapling
-
-```yaml
+# Disable OCSP stapling
 nginx_ssl_stapling_enabled: false
+
+# Disable gzip compression
+nginx_gzip_enabled: false
+
+# Disable logrotate management
+nginx_logrotate_enabled: false
+
+# Disable kernel optimization
+nginx_kernel_optimization_enabled: false
 ```

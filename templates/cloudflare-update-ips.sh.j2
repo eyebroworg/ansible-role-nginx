@@ -2,12 +2,26 @@
 # Cloudflare IP update script for nginx real_ip configuration
 # Managed by Ansible - eyebrowkang.nginx role
 # This script fetches Cloudflare IP ranges and updates nginx configuration
+#
+# Usage: cloudflare-update-ips.sh [--no-reload]
+#   --no-reload  Skip nginx validation and reload (useful during initial setup)
 
 set -euo pipefail
 
 CONFIG_FILE="{{ nginx_cloudflare_real_ip_config }}"
 TEMP_FILE="${CONFIG_FILE}.tmp"
 REAL_IP_HEADER="{{ nginx_cloudflare_real_ip_header }}"
+
+# Parse arguments
+NO_RELOAD=false
+for arg in "$@"; do
+    case $arg in
+        --no-reload)
+            NO_RELOAD=true
+            shift
+            ;;
+    esac
+done
 
 # Cloudflare API endpoints
 CF_IPV4_URL="https://www.cloudflare.com/ips-v4"
@@ -77,21 +91,28 @@ echo "" >> "$TEMP_FILE"
 echo "# Use the ${REAL_IP_HEADER} header from Cloudflare" >> "$TEMP_FILE"
 echo "real_ip_header ${REAL_IP_HEADER};" >> "$TEMP_FILE"
 
-# Validate nginx configuration with the new file
-if nginx -t 2>/dev/null; then
-    # Move temporary file to final location
+# Handle reload based on --no-reload flag
+if [ "$NO_RELOAD" = true ]; then
+    # Just move the file without validation/reload (used during initial Ansible deployment)
     mv "$TEMP_FILE" "$CONFIG_FILE"
-
-    # Reload nginx if it's running
-    if systemctl is-active --quiet nginx 2>/dev/null; then
-        systemctl reload nginx
-    elif service nginx status >/dev/null 2>&1; then
-        service nginx reload
-    fi
-
-    echo "Cloudflare IP configuration updated successfully"
+    echo "Cloudflare IP configuration generated successfully (reload skipped)"
 else
-    rm -f "$TEMP_FILE"
-    echo "Nginx configuration validation failed, keeping existing configuration"
-    exit 1
+    # Validate nginx configuration with the new file
+    if nginx -t 2>/dev/null; then
+        # Move temporary file to final location
+        mv "$TEMP_FILE" "$CONFIG_FILE"
+
+        # Reload nginx if it's running
+        if systemctl is-active --quiet nginx 2>/dev/null; then
+            systemctl reload nginx
+        elif service nginx status >/dev/null 2>&1; then
+            service nginx reload
+        fi
+
+        echo "Cloudflare IP configuration updated successfully"
+    else
+        rm -f "$TEMP_FILE"
+        echo "Nginx configuration validation failed, keeping existing configuration"
+        exit 1
+    fi
 fi

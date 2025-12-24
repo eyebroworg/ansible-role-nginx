@@ -1,4 +1,67 @@
 ---
+# =============================================================================
+# Configuration Backup
+# =============================================================================
+- name: Backup existing nginx configuration.
+  when: nginx_backup_existing_config | bool
+  block:
+    - name: Create backup directory.
+      ansible.builtin.file:
+        path: "{{ nginx_conf_file_path | dirname }}/backup"
+        state: directory
+        owner: root
+        group: "{{ root_group }}"
+        mode: "0755"
+
+    - name: Generate backup timestamp.
+      ansible.builtin.set_fact:
+        _backup_timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
+
+    - name: Check if conf.d directory exists.
+      ansible.builtin.stat:
+        path: "{{ nginx_conf_path }}"
+      register: _conf_d_stat
+
+    - name: Check if vhost directory exists.
+      ansible.builtin.stat:
+        path: "{{ nginx_vhost_path }}"
+      register: _vhost_stat
+
+    - name: Backup conf.d directory.
+      ansible.builtin.copy:
+        src: "{{ nginx_conf_path }}/"
+        dest: "{{ nginx_conf_file_path | dirname }}/backup/conf.d-{{ _backup_timestamp }}/"
+        remote_src: true
+        mode: preserve
+      when: _conf_d_stat.stat.exists and _conf_d_stat.stat.isdir
+
+    - name: Backup vhost directory.
+      ansible.builtin.copy:
+        src: "{{ nginx_vhost_path }}/"
+        dest: "{{ nginx_conf_file_path | dirname }}/backup/{{ nginx_vhost_path | basename }}-{{ _backup_timestamp }}/"
+        remote_src: true
+        mode: preserve
+      when:
+        - _vhost_stat.stat.exists and _vhost_stat.stat.isdir
+        - nginx_vhost_path != nginx_conf_path
+
+    - name: Clear conf.d directory for clean deployment.
+      ansible.builtin.file:
+        path: "{{ nginx_conf_path }}"
+        state: absent
+      when: _conf_d_stat.stat.exists
+
+    - name: Clear vhost directory for clean deployment.
+      ansible.builtin.file:
+        path: "{{ nginx_vhost_path }}"
+        state: absent
+      when:
+        - _vhost_stat.stat.exists
+        - nginx_vhost_path != nginx_conf_path
+
+# =============================================================================
+# Vhost Directory Setup
+# =============================================================================
 - name: Remove default nginx vhost config file (if configured).
   ansible.builtin.file:
     path: "{{ nginx_default_vhost_path }}"
