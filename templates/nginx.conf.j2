@@ -66,6 +66,8 @@ http {
     gzip_comp_level {{ nginx_gzip_comp_level | default('5') }};
     gzip_min_length {{ nginx_gzip_min_length | default('256') }};
     gzip_proxied {{ nginx_gzip_proxied | default('any') }};
+    gzip_buffers {{ nginx_gzip_buffers | default('16 8k') }};
+    gzip_http_version {{ nginx_gzip_http_version | default('1.1') }};
     gzip_vary {{ nginx_gzip_vary | default('on') }};
     gzip_types {{ nginx_gzip_types | default(['text/plain', 'text/css', 'application/json', 'application/javascript', 'text/xml', 'application/xml', 'image/svg+xml']) | join(' ') }};
 {% endif %}

@@ -62,6 +62,8 @@ nginx_gzip_comp_level: "5"
 nginx_gzip_min_length: "256"
 nginx_gzip_proxied: "any"
 nginx_gzip_vary: "on"
+nginx_gzip_buffers: "16 8k"
+nginx_gzip_http_version: "1.1"
 nginx_gzip_types:
   - "application/atom+xml"
   - "application/javascript"
