@@ -5,6 +5,9 @@ pid        {{ nginx_pidfile }};
 
 {% block worker %}
 worker_processes  {{ nginx_worker_processes }};
+{% if nginx_worker_rlimit_nofile %}
+worker_rlimit_nofile {{ nginx_worker_rlimit_nofile }};
+{% endif %}
 {% endblock %}
 
 {% if nginx_extra_conf_options %}
@@ -26,8 +29,12 @@ http {
     default_type  application/octet-stream;
 
     server_names_hash_bucket_size {{ nginx_server_names_hash_bucket_size }};
+    types_hash_max_size {{ nginx_types_hash_max_size }};
 
     client_max_body_size {{ nginx_client_max_body_size }};
+    client_body_buffer_size {{ nginx_client_body_buffer_size }};
+    client_header_timeout {{ nginx_client_header_timeout }};
+    client_body_timeout {{ nginx_client_body_timeout }};
 
     log_format  main  {{ nginx_log_format|indent(23) }};
 
@@ -39,6 +46,9 @@ http {
 
     keepalive_timeout  {{ nginx_keepalive_timeout }};
     keepalive_requests {{ nginx_keepalive_requests }};
+
+    send_timeout {{ nginx_send_timeout }};
+    reset_timedout_connection {{ nginx_reset_timedout_connection }};
 
     server_tokens {{ nginx_server_tokens }};
 {% if nginx_proxy_cache_path %}
@@ -55,6 +65,16 @@ http {
     gzip_proxied {{ nginx_gzip_proxied | default('any') }};
     gzip_vary {{ nginx_gzip_vary | default('on') }};
     gzip_types {{ nginx_gzip_types | default(['text/plain', 'text/css', 'application/json', 'application/javascript', 'text/xml', 'application/xml', 'image/svg+xml']) | join(' ') }};
+{% endif %}
+{% endblock %}
+
+{% block http_open_file_cache %}
+{% if nginx_open_file_cache_enabled | default(false) %}
+    # Open file cache (static file serving optimization)
+    open_file_cache max={{ nginx_open_file_cache_max }} inactive={{ nginx_open_file_cache_inactive }};
+    open_file_cache_valid {{ nginx_open_file_cache_valid }};
+    open_file_cache_min_uses {{ nginx_open_file_cache_min_uses }};
+    open_file_cache_errors {{ nginx_open_file_cache_errors }};
 {% endif %}
 {% endblock %}
 

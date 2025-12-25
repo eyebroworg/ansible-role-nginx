@@ -26,6 +26,10 @@ nginx_worker_processes: >-
 nginx_worker_connections: "1024"
 nginx_multi_accept: "off"
 
+# Worker process file descriptor limit (requires system ulimit to be >= this value)
+# Empty = not set (system default). Recommended: worker_connections * 2 or higher.
+nginx_worker_rlimit_nofile: ""
+
 nginx_error_log: "/var/log/nginx/error.log warn"
 nginx_access_log: "/var/log/nginx/access.log main buffer=16k flush=2m"
 
@@ -39,6 +43,11 @@ nginx_keepalive_requests: "600"
 nginx_server_tokens: "off"
 
 nginx_client_max_body_size: "64m"
+nginx_client_body_buffer_size: "16k"
+nginx_client_header_timeout: "60s"
+nginx_client_body_timeout: "60s"
+nginx_send_timeout: "60s"
+nginx_reset_timedout_connection: "on"
 
 # =============================================================================
 # Gzip Compression
@@ -77,6 +86,20 @@ nginx_gzip_types:
   - "text/xml"
 
 nginx_server_names_hash_bucket_size: "64"
+nginx_types_hash_max_size: "2048"
+
+# =============================================================================
+# Open File Cache (for static file serving optimization)
+# =============================================================================
+# Caches file descriptors, file sizes, and modification times.
+# Improves performance for static file serving by reducing open() syscalls.
+# Not recommended for sites with dynamically changing files.
+nginx_open_file_cache_enabled: false
+nginx_open_file_cache_max: "10000"
+nginx_open_file_cache_inactive: "60s"
+nginx_open_file_cache_valid: "30s"
+nginx_open_file_cache_min_uses: "2"
+nginx_open_file_cache_errors: "on"
 
 nginx_proxy_cache_path: ""
 
