@@ -98,3 +98,55 @@
         enabled: false
       failed_when: false
       when: ansible_facts.service_mgr == 'systemd'
+
+# =============================================================================
+# Full Cloudflare Cleanup (removes all related files)
+# =============================================================================
+# Use this to completely remove Cloudflare integration files:
+#   ansible-playbook playbook.yml -e nginx_cloudflare_cleanup=true
+- name: Full cleanup of Cloudflare integration
+  when: nginx_cloudflare_cleanup | bool
+  block:
+    - name: Stop and disable Cloudflare IP update timer
+      ansible.builtin.systemd:
+        name: cloudflare-update-ips.timer
+        state: stopped
+        enabled: false
+      failed_when: false
+      when: ansible_facts.service_mgr == 'systemd'
+
+    - name: Remove Cloudflare systemd timer
+      ansible.builtin.file:
+        path: /etc/systemd/system/cloudflare-update-ips.timer
+        state: absent
+      notify: Daemon reload
+      when: ansible_facts.service_mgr == 'systemd'
+
+    - name: Remove Cloudflare systemd service
+      ansible.builtin.file:
+        path: /etc/systemd/system/cloudflare-update-ips.service
+        state: absent
+      notify: Daemon reload
+      when: ansible_facts.service_mgr == 'systemd'
+
+    - name: Remove Cloudflare IP update script
+      ansible.builtin.file:
+        path: "{{ nginx_cloudflare_ip_update_script }}"
+        state: absent
+
+    - name: Remove Cloudflare real_ip configuration
+      ansible.builtin.file:
+        path: "{{ nginx_cloudflare_real_ip_config }}"
+        state: absent
+      notify: Reload nginx
+
+    - name: Remove Cloudflare Origin Pull CA certificate
+      ansible.builtin.file:
+        path: "{{ nginx_cloudflare_origin_pull_cert_path }}"
+        state: absent
+
+    - name: Remove Cloudflare certificate directory if empty
+      ansible.builtin.file:
+        path: "{{ nginx_cloudflare_origin_pull_cert_path | dirname }}"
+        state: absent
+      failed_when: false

@@ -21,8 +21,12 @@
 # =============================================================================
 # DH Parameters Generation
 # =============================================================================
+# DH parameters are only needed for TLSv1.2 (intermediate policy).
+# TLSv1.3 uses ECDHE exclusively, so dhparam is not required for modern policy.
 - name: Generate DH parameters
-  when: nginx_ssl_dhparam_enabled | bool
+  when:
+    - nginx_ssl_dhparam_enabled | bool
+    - nginx_ssl_policy != 'modern'
   block:
     - name: Check if DH parameters file exists
       ansible.builtin.stat:

@@ -21,6 +21,11 @@ nginx_service_enabled: true
 nginx_conf_template: "nginx.conf.j2"
 nginx_vhost_template: "vhost.j2"
 
+# Include dynamic modules path.
+# Debian/Ubuntu: enabled by default (/etc/nginx/modules-enabled/*.conf)
+# Other distros: empty (not included). Override if needed.
+nginx_modules_include: ""
+
 nginx_worker_processes: >-
   "{{ ansible_processor_vcpus | default(ansible_processor_count) }}"
 nginx_worker_connections: "1024"
@@ -240,6 +245,11 @@ nginx_vault_certificates: []
 # =============================================================================
 # Enable Cloudflare real IP module configuration
 nginx_cloudflare_enabled: false
+
+# Remove all Cloudflare-related files (script, systemd units, config)
+# Use this to clean up after disabling Cloudflare integration:
+#   ansible-playbook playbook.yml -e nginx_cloudflare_cleanup=true
+nginx_cloudflare_cleanup: false
 
 # Cloudflare real_ip configuration
 nginx_cloudflare_real_ip_enabled: true

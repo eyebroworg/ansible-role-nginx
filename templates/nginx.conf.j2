@@ -1,4 +1,7 @@
 user  {{ nginx_user }};
+{% if nginx_modules_include %}
+include {{ nginx_modules_include }};
+{% endif %}
 
 error_log  {{ nginx_error_log }};
 pid        {{ nginx_pidfile }};
