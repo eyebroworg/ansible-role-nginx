@@ -87,7 +87,7 @@ server {
 
 {% if nginx_hsts_enabled | default(true) %}
     # HSTS (1 year, includeSubDomains)
-    add_header Strict-Transport-Security "max-age=31536000 includeSubDomains" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 {% endif %}
 
 {% if item.ssl_client_certificate is defined %}

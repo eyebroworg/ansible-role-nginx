@@ -97,10 +97,20 @@ if [ "$NO_RELOAD" = true ]; then
     mv "$TEMP_FILE" "$CONFIG_FILE"
     echo "Cloudflare IP configuration generated successfully (reload skipped)"
 else
+    # Backup existing configuration if it exists
+    BACKUP_FILE=""
+    if [ -f "$CONFIG_FILE" ]; then
+        BACKUP_FILE="${CONFIG_FILE}.bak"
+        cp "$CONFIG_FILE" "$BACKUP_FILE"
+    fi
+
+    # Move new configuration into place
+    mv "$TEMP_FILE" "$CONFIG_FILE"
+
     # Validate nginx configuration with the new file
     if nginx -t 2>/dev/null; then
-        # Move temporary file to final location
-        mv "$TEMP_FILE" "$CONFIG_FILE"
+        # Validation passed, remove backup and reload nginx
+        [ -n "$BACKUP_FILE" ] && rm -f "$BACKUP_FILE"
 
         # Reload nginx if it's running
         if systemctl is-active --quiet nginx 2>/dev/null; then
@@ -111,8 +121,15 @@ else
 
         echo "Cloudflare IP configuration updated successfully"
     else
-        rm -f "$TEMP_FILE"
-        echo "Nginx configuration validation failed, keeping existing configuration"
+        # Validation failed, rollback to previous configuration
+        echo "Nginx configuration validation failed"
+        if [ -n "$BACKUP_FILE" ] && [ -f "$BACKUP_FILE" ]; then
+            mv "$BACKUP_FILE" "$CONFIG_FILE"
+            echo "Rolled back to previous configuration"
+        else
+            rm -f "$CONFIG_FILE"
+            echo "Removed invalid configuration"
+        fi
         exit 1
     fi
 fi

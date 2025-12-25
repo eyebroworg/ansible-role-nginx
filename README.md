@@ -2,6 +2,8 @@
 
 ## This repo is forked from [geerlingguy/ansible-role-nginx](https://github.com/geerlingguy/ansible-role-nginx) with some customized modification for me.
 
+**[Configuration Examples and Extended Features](docs/EXAMPLES.md)** - SSL/TLS, Cloudflare, performance optimization, and more.
+
 [![CI](https://github.com/geerlingguy/ansible-role-nginx/actions/workflows/ci.yml/badge.svg)](https://github.com/geerlingguy/ansible-role-nginx/actions/workflows/ci.yml)
 
 **Note:** Please consider using the official [NGINX Ansible role](https://github.com/nginxinc/ansible-role-nginx) from NGINX, Inc.
